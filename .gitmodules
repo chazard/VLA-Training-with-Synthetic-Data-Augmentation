@@ -1,0 +1,6 @@
+[submodule "third_party/groot"]
+	path = third_party/groot
+	url = https://github.com/NVIDIA/Isaac-GR00T.git
+[submodule "third_party/IsaacLab"]
+	path = third_party/IsaacLab
+	url = https://github.com/chazard/IsaacLab.git
