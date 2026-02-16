@@ -1,0 +1,14 @@
+[project]
+name = "vla-active-learning"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "requests",
+    "pydantic",
+    "pyyaml",
+    "tqdm",
+    "numpy",
+]
+
+[project.optional-dependencies]
+dev = ["ipython", "ruff"]
