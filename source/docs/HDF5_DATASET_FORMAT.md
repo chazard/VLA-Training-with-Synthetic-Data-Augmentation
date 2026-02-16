@@ -71,7 +71,7 @@ From the project root (or from `isaac_envs`):
 python scripts/print_hdf5_structure.py
 ```
 
-This uses the default path `isaac_envs/data/franka_stack_dataset.hdf5` (relative to the project root). To use another file:
+This uses the default path `source/data/franka_stack_dataset.hdf5` (relative to the project root). To use another file:
 
 ```bash
 python scripts/print_hdf5_structure.py /path/to/file.hdf5
@@ -82,7 +82,7 @@ Use `--full` to print the full tree for every demo instead of a template plus su
 ## Example summary output
 
 ```
-File: .../isaac_envs/data/franka_stack_dataset.hdf5
+File: .../source/data/franka_stack_dataset.hdf5
 Root keys: ['data']
 
 data/: 10 demos

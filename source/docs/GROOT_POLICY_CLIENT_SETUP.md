@@ -100,7 +100,7 @@ Use different ports (5555 and 5556). `--execution-horizon 1` keeps replay in loc
 
 **Terminal 3:**
 ```bash
-python isaac_envs/scripts/run_agent_rollout.py --task Isaac-Stack-Cube-Franka-Visuomotor-Custom-v0 --agent groot --demo_replay_comparison --hdf5-path /path/to/franka_stack_dataset.hdf5 --demo-index 0 --start-step 0 --model-port 5555 --replay-port 5556
+python source/scripts/run_agent_rollout.py --task Isaac-Stack-Cube-Franka-Visuomotor-Custom-v0 --agent groot --demo_replay_comparison --hdf5-path /path/to/franka_stack_dataset.hdf5 --demo-index 0 --start-step 0 --model-port 5555 --replay-port 5556
 ```
 
 | Argument | Description |

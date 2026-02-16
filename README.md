@@ -144,9 +144,9 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 CUDA_VISIBLE_DEVICES=0 python \
   gr00t/experiment/launch_finetune.py \
   --base-model-path nvidia/GR00T-N1.6-3B \
-  --dataset-path /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/isaac_envs/data/generated_dataset_small_lerobot \
+  --dataset-path /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/source/data/generated_dataset_small_lerobot \
   --embodiment-tag NEW_EMBODIMENT \
-  --modality-config-path /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/isaac_envs/scripts/franka_stack_groot_config.py \
+  --modality-config-path /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/source/scripts/franka_stack_groot_config.py \
   --num-gpus $NUM_GPUS \
   --output-dir /home/chris/groot_training_results \
   --save-total-limit 5 \
@@ -331,8 +331,8 @@ This creates an implicit curriculum:
   --enable_cameras \
   --task Isaac-Stack-Cube-Franka-IK-Rel-Visuomotor-Mimic-v0 \
   --auto \
-  --input_file /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/isaac_envs/data/franka_stack_dataset.hdf5 \
-  --output_file /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/isaac_envs/data/annotated_franka_stack_dataset.hdf5
+  --input_file /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/source/data/franka_stack_dataset.hdf5 \
+  --output_file /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/source/data/annotated_franka_stack_dataset.hdf5
 ```
 
 ### Generate a small synthetic dataset
@@ -344,8 +344,8 @@ This creates an implicit curriculum:
   --task Isaac-Stack-Cube-Franka-IK-Rel-Visuomotor-Mimic-v0 \
   --num_envs 5 \
   --generation_num_trials 20 \
-  --input_file /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/isaac_envs/data/annotated_franka_stack_dataset.hdf5 \
-  --output_file /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/isaac_envs/data/generated_dataset_small.hdf5
+  --input_file /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/source/data/annotated_franka_stack_dataset.hdf5 \
+  --output_file /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/source/data/generated_dataset_small.hdf5
 ```
 
 ### Generate a larger dataset (headless)
@@ -358,8 +358,8 @@ This creates an implicit curriculum:
   --task Isaac-Stack-Cube-Franka-IK-Rel-Visuomotor-Mimic-v0 \
   --num_envs 20 \
   --generation_num_trials 1000 \
-  --input_file /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/isaac_envs/data/annotated_franka_stack_dataset.hdf5 \
-  --output_file /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/isaac_envs/data/generated_dataset.hdf5
+  --input_file /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/source/data/annotated_franka_stack_dataset.hdf5 \
+  --output_file /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/source/data/generated_dataset.hdf5
 ```
 
 ## Status

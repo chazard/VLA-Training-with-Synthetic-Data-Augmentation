@@ -115,7 +115,7 @@ docstring-code-format = true
 
 [tool.pyright]
 
-include = ["isaac_envs", "isaac_envs/scripts"]
+include = ["source", "source/scripts"]
 exclude = [
     "**/__pycache__",
     "**/_isaac_sim",

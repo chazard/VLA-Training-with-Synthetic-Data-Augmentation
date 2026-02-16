@@ -8,7 +8,7 @@ import h5py
 
 # Project root = parent of isaac_envs (repo root when isaac_envs is inside the repo)
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-DEFAULT_PATH = _PROJECT_ROOT / "isaac_envs" / "data" / "generated_dataset_small.hdf5"
+DEFAULT_PATH = _PROJECT_ROOT / "source" / "data" / "generated_dataset_small.hdf5"
 
 
 def _visit(name: str, obj, indent: int, template_only: bool, demo_len: dict | None):
