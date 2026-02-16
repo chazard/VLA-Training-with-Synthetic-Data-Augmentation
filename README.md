@@ -146,7 +146,7 @@ CUDA_VISIBLE_DEVICES=0 python \
   --base-model-path nvidia/GR00T-N1.6-3B \
   --dataset-path /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/isaac_envs/data/generated_dataset_small_lerobot \
   --embodiment-tag NEW_EMBODIMENT \
-  --modality-config-path /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/isaac_envs/configs/franka_stack_groot_config.py \
+  --modality-config-path /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/isaac_envs/scripts/franka_stack_groot_config.py \
   --num-gpus $NUM_GPUS \
   --output-dir /home/chris/groot_training_results \
   --save-total-limit 5 \
