@@ -94,4 +94,4 @@ All actions must be **torch tensors** on `env.unwrapped.device`.
    Use `obs["policy"]["table_cam"]` and/or `obs["policy"]["wrist_cam"]` (and optionally state keys) as inputs to your vision or visuomotor model; output a tensor of shape `(num_envs, action_dim)`.
 
 4. **Config and event terms**  
-   To change randomization (cubes, lights, cameras, etc.) or which events run at reset, adjust `CustomCubeStackEnvCfg` (e.g. `active_event_terms`, `set_distribution_parameters`) before creating the env; see `stack_cube_wrapper_cfg.py`.
+   To change randomization (cubes, lights, cameras, etc.) or which events run at reset, adjust `CustomCubeStackEnvCfg` (e.g. `set_active_event_terms`, `set_distribution_parameters`) before creating the env; see `stack_cube_wrapper_cfg.py`.

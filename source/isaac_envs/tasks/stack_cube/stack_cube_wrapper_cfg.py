@@ -16,6 +16,8 @@ from isaaclab_tasks.manager_based.manipulation.stack.config.franka.stack_ik_rel_
 )
 from isaaclab_tasks.manager_based.manipulation.stack.mdp import franka_stack_events
 
+from isaac_envs.tasks.searchable_env_cfg import SearchableEnvironmentCfg, SettableParamsT
+
 from . import stack_cube_events
 
 # -----------------------------------------------------------------------------
@@ -23,18 +25,46 @@ from . import stack_cube_events
 # -----------------------------------------------------------------------------
 
 # Event terms with continuous or range-based params (set_distribution_parameters).
-ALL_CHANGEABLE_EVENT_TERMS: list[str] = [
-    "randomize_cube_1_position",
-    "randomize_cube_2_position",
-    "randomize_cube_3_position",
-    "randomize_light_intensity_color",
-    "randomize_table_cam_orientation",
-    "randomize_wrist_cam_orientation",
-    "randomize_franka_joint_state",
-    "randomize_cube_1_scale",
-    "randomize_cube_2_scale",
-    "randomize_cube_3_scale",
-]
+# Maps each changeable event term to key sequences in DEFAULT_EVENT_RANGES that lead to
+# range parameters (tuples). Only tuple-valued params are included.
+ALL_CHANGEABLE_EVENT_TERMS: dict[str, list[list[str]]] = {
+    "randomize_cube_1_position": [
+        ["cube", "pose_range", "x"],
+        ["cube", "pose_range", "y"],
+        ["cube", "pose_range", "yaw"],
+    ],
+    "randomize_cube_2_position": [
+        ["cube", "pose_range", "x"],
+        ["cube", "pose_range", "y"],
+        ["cube", "pose_range", "yaw"],
+    ],
+    "randomize_cube_3_position": [
+        ["cube", "pose_range", "x"],
+        ["cube", "pose_range", "y"],
+        ["cube", "pose_range", "yaw"],
+    ],
+    "randomize_light_intensity_color": [
+        ["light", "intensity_range"],
+    ],
+    "randomize_table_cam_orientation": [
+        ["camera", "pitch_range"],
+        ["camera", "yaw_range"],
+    ],
+    "randomize_wrist_cam_orientation": [
+        ["camera", "pitch_range"],
+        ["camera", "yaw_range"],
+    ],
+    "randomize_franka_joint_state": [],  # no tuple ranges in franka_joint
+    "randomize_cube_1_scale": [
+        ["cube_scale", "scale_percent_range"],
+    ],
+    "randomize_cube_2_scale": [
+        ["cube_scale", "scale_percent_range"],
+    ],
+    "randomize_cube_3_scale": [
+        ["cube_scale", "scale_percent_range"],
+    ],
+}
 
 # Event term that is always active (cannot be disabled)
 ALWAYS_ACTIVE_EVENT_TERM = "init_franka_arm_pose"
@@ -74,7 +104,7 @@ DEFAULT_EVENT_RANGES = {
     },
     "light": {
         "intensity_range": (1500.0, 10000.0),
-        "color_variation": 0.2,
+        "color_variation": 0.0, #.2 #TODO: decide how to deal with non-searchable domain randomization variables (eg color, discrete texture,etc.)
     },
     "franka_joint": {
         "pose": [0.0444, -0.1894, -0.1107, -2.5148, 0.0044, 2.3775, 0.6952, 0.0400, 0.0400],
@@ -93,6 +123,7 @@ DEFAULT_EVENT_RANGES = {
     },
 }
 
+
 def _default_light_textures() -> list[str]:
     """Default HDR list for dome/background light (minimal so randomization has at least one choice)."""
     return [f"{NVIDIA_NUCLEUS_DIR}/Assets/Skies/Cloudy/lakeside_4k.hdr"]
@@ -107,7 +138,7 @@ def _default_robot_textures() -> list[str]:
 
 def _build_event_term(term_name: str) -> EventTerm:
     """Build a single event term by name. Raises ValueError if term_name is not in allowed lists."""
-    allowed = ALL_CHANGEABLE_EVENT_TERMS + DISCRETE_EVENT_TERMS + [ALWAYS_ACTIVE_EVENT_TERM]
+    allowed = list(ALL_CHANGEABLE_EVENT_TERMS.keys()) + DISCRETE_EVENT_TERMS + [ALWAYS_ACTIVE_EVENT_TERM]
     if term_name not in allowed:
         raise ValueError(f"Unknown event term '{term_name}'. Allowed: {allowed}")
 
@@ -287,41 +318,18 @@ def _build_events_from_term_names(term_names: list[str]) -> object:
 # -----------------------------------------------------------------------------
 
 @configclass
-class CustomCubeStackEnvCfg(FrankaCubeStackVisuomotorEnvCfg):
+class CustomCubeStackEnvCfg(FrankaCubeStackVisuomotorEnvCfg, SearchableEnvironmentCfg):
     """
     Visuomotor stack cube config with:
     - set_distribution_parameters(event_term_name -> param ranges/values) to set event params.
-    - active_event_terms: only these events run on reset; default is DEFAULT_ACTIVE_EVENT_TERMS.
     - For deterministic values use (v, v) for range params (e.g. intensity_range=(5000, 5000)).
     - init_franka_arm_pose is always active (cannot be disabled) to ensure consistent robot initialization.
     """
 
-    active_event_terms: list[str] = list(DEFAULT_ACTIVE_EVENT_TERMS)
-
     def __post_init__(self):
         super().__post_init__()
         # Replace events with only the active terms (so resets only trigger these).
-        self.events = _build_events_from_term_names(self.active_event_terms)
-
-    def set_distribution_parameters(self, params_dict: dict[str, dict[str, Any]]) -> None:
-        """
-        Set parameter ranges or fixed values for event terms.
-
-        Args:
-            params_dict: Map from event term name to a dict of param name -> value.
-                Use (min, max) for ranges; (v, v) for deterministic. Pass full dicts (e.g. pose_range) to replace.
-
-        Only updates terms that are currently in active_event_terms.
-        """
-        allowed = ALL_CHANGEABLE_EVENT_TERMS + DISCRETE_EVENT_TERMS
-        for term_name, param_updates in params_dict.items():
-            if term_name not in allowed:
-                continue
-            if not hasattr(self.events, term_name):
-                continue
-            term_cfg = getattr(self.events, term_name)
-            for key, val in param_updates.items():
-                term_cfg.params[key] = val
+        self.events = _build_events_from_term_names(list(DEFAULT_ACTIVE_EVENT_TERMS))
 
     def set_active_event_terms(self, term_names: list[str]) -> None:
         """
@@ -332,12 +340,11 @@ class CustomCubeStackEnvCfg(FrankaCubeStackVisuomotorEnvCfg):
                 or DISCRETE_EVENT_TERMS. Note: init_franka_arm_pose is always active and will be included
                 automatically.
         """
-        allowed = ALL_CHANGEABLE_EVENT_TERMS + DISCRETE_EVENT_TERMS
+        allowed = list(ALL_CHANGEABLE_EVENT_TERMS.keys()) + DISCRETE_EVENT_TERMS
         for name in term_names:
             if name not in allowed:
                 raise ValueError(f"Unknown event term '{name}'. Allowed: {allowed}")
-        self.active_event_terms = list(term_names)
-        self.events = _build_events_from_term_names(self.active_event_terms)
+        self.events = _build_events_from_term_names(list(term_names))
 
     def get_default_event_ranges(self) -> dict[str, Any]:
         """Return a deep copy of the default event parameter ranges for this env.
@@ -349,3 +356,86 @@ class CustomCubeStackEnvCfg(FrankaCubeStackVisuomotorEnvCfg):
         """Return the default list of active event term names for this env.
         Used by domain samplers so they can apply to any env that exposes this interface."""
         return list(DEFAULT_ACTIVE_EVENT_TERMS)
+
+    def check_feasibility(
+        self,
+        distribution_parameters: SettableParamsT,
+    ) -> bool:
+        """Check feasibility: no two cube positions within min_separation. Assumes ranges have min==max (point)."""
+        min_separation = DEFAULT_EVENT_RANGES["cube"]["min_separation"]
+        points: list[tuple[float, float]] = []
+        for term_name in ("randomize_cube_1_position", "randomize_cube_2_position", "randomize_cube_3_position"):
+            if term_name not in distribution_parameters:
+                continue
+            x = y = None
+            for key_seq, range_tuple in distribution_parameters[term_name]:
+                if key_seq[-1] == "x":
+                    x = range_tuple[0]  # min==max assumed
+                elif key_seq[-1] == "y":
+                    y = range_tuple[0]
+            if x is not None and y is not None:
+                points.append((x, y))
+                
+        #Check pairwise distances between points
+        for i in range(len(points)):
+            for j in range(i + 1, len(points)):
+                dx = points[i][0] - points[j][0]
+                dy = points[i][1] - points[j][1]
+                if (dx * dx + dy * dy) ** 0.5 < min_separation:
+                    return False
+        return True
+
+    def get_settable_parameters_for_active_events(self) -> SettableParamsT:
+        """Return current range parameters for each active event term in a stable order.
+
+        Iterates active event terms (sorted for consistent key order), uses
+        ALL_CHANGEABLE_EVENT_TERMS to get key sequences, and resolves each path
+        in the event term params to the current range. Same ordering is used so
+        amended ranges can be passed back (e.g. to set_distribution_parameters or CEM).
+        """
+        result: SettableParamsT = {}
+        # Derive active terms from self.events (exclude always-active); sort for stable order.
+        active_terms = sorted(
+            k for k in vars(self.events).keys()
+            if k != ALWAYS_ACTIVE_EVENT_TERM
+        )
+        for term_name in active_terms:
+            if term_name not in ALL_CHANGEABLE_EVENT_TERMS:
+                raise ValueError(
+                    f"Event term '{term_name}' is not in ALL_CHANGEABLE_EVENT_TERMS; "
+                    "get_settable_parameters_for_active_events only supports changeable terms."
+                )
+            key_sequences = ALL_CHANGEABLE_EVENT_TERMS[term_name]
+            term_cfg = getattr(self.events, term_name)
+            params = term_cfg.params
+            pairs: list[tuple[list[str], tuple[float, float]]] = []
+            for key_seq in key_sequences:
+                value = params
+                for k in key_seq[1:]:
+                    value = value[k]
+                pairs.append((list(key_seq), (float(value[0]), float(value[1]))))
+            result[term_name] = pairs
+        return result
+
+    def set_distribution_parameters(self, params: SettableParamsT) -> None:
+        """
+        Set parameter ranges from the same format as get_settable_parameters_for_active_events.
+
+        Args:
+            params: Map from event term name to list of (key_sequence, range_tuple).
+                Same format and ordering as returned by get_settable_parameters_for_active_events.
+        """
+        for term_name, pairs in params.items():
+            if term_name not in ALL_CHANGEABLE_EVENT_TERMS or not hasattr(self.events, term_name):
+                warnings.warn(
+                    f"set_distribution_parameters: skipping '{term_name}' (not in ALL_CHANGEABLE_EVENT_TERMS or not on self.events).",
+                    stacklevel=2,
+                )
+                continue
+            term_cfg = getattr(self.events, term_name)
+            for key_seq, range_tuple in pairs:
+                d = term_cfg.params
+                path = key_seq[1:]
+                for k in path[:-1]:
+                    d = d[k]
+                d[path[-1]] = range_tuple
