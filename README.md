@@ -80,9 +80,9 @@ Before introducing gradient-guided data selection, we first verify that meaningf
 
 We define a continuous perturbation vector:
 
-\[
+$$
 \theta \in \mathbb{R}^d
-\]
+$$
 
 Encoding reset-time environment parameters such as:
 
@@ -95,17 +95,17 @@ Encoding reset-time environment parameters such as:
 
 ### Optimization Objective
 
-For a given perturbation \( \theta \), we estimate:
+For a given perturbation $\theta$, we estimate:
 
-\[
+$$
 J(\theta) = \mathbb{E}_{s}[\mathbf{1}_{\text{fail}}(\pi, \theta, s)]
-\]
+$$
 
 Where:
 
-- \( s \) denotes stochastic rollout seeds
-- \( \mathbf{1}_{\text{fail}} \) is a binary failure indicator
-- Expectation is approximated with multiple rollouts per \( \theta \)
+- $s$ denotes stochastic rollout seeds
+- $\mathbf{1}_{\text{fail}}$ is a binary failure indicator
+- Expectation is approximated with multiple rollouts per $\theta$
 
 The goal is to maximize failure probability.
 
@@ -115,16 +115,16 @@ The goal is to maximize failure probability.
 
 We maintain a sampling distribution over perturbations:
 
-\[
+$$
 q_t(\theta) = \sum_{k=1}^{K} \pi_k \mathcal{N}(\theta \mid \mu_k, \Sigma_k)
-\]
+$$
 
 At each iteration:
 
-1. Sample \( N \) perturbations \( \theta_i \sim q_t \)
+1. Sample $N$ perturbations $\theta_i \sim q_t$
 2. Reject infeasible configurations (e.g., cube overlap)
-3. Evaluate failure rate \( J(\theta_i) \)
-4. Select top \( \rho \% \) elite perturbations
+3. Evaluate failure rate $J(\theta_i)$
+4. Select top $\rho\%$ elite perturbations
 5. Fit the mixture model to elites via EM
 6. Smoothly update mixture parameters
 7. Repeat
@@ -160,26 +160,26 @@ This reframes active learning as a **training-signal maximization problem**, rat
 
 ## Core Idea
 
-For a seed demonstration \( d \) and mutation parameters \( \phi \),  
+For a seed demonstration $d$ and mutation parameters $\phi$,  
 MimicGen produces a trajectory:
 
-\[
+$$
 \tau_{d,\phi} = G(d, \phi)
-\]
+$$
 
 We define an acquisition score:
 
-\[
+$$
 s(d, \phi) =
 \left\|
 \nabla_{\theta_{\text{head}}}
 L_{\text{diff}}(\tau_{d,\phi})
 \right\|^2
-\]
+$$
 
 Where:
 
-- \( L_{\text{diff}} \) is the diffusion head loss
+- $L_{\text{diff}}$ is the diffusion head loss
 - Gradients are computed with respect to trainable action-head / adapter parameters
 - Diffusion noise seeds are fixed during scoring to reduce variance
 
@@ -194,17 +194,17 @@ Where:
 
 To reduce computational cost:
 
-1. Sample \( m \) anchor timesteps from the trajectory  
-2. Extract local action chunks of horizon \( H \)  
+1. Sample $m$ anchor timesteps from the trajectory  
+2. Extract local action chunks of horizon $H$  
 3. Approximate:
 
-\[
+$$
 L_{\text{diff}}(\tau)
 \approx
 \frac{1}{m}
 \sum_j
 L_{\text{diff}}(c_{t_j}, a_{t_j:t_j+H-1})
-\]
+$$
 
 4. Perform a single backward pass  
 5. Compute squared L2 norm over action-head gradients  
@@ -215,19 +215,19 @@ This provides a low-cost proxy for expected parameter update magnitude.
 
 ## Per-Demonstration Mutation Search
 
-For each demonstration \( d \), we maintain a mutation distribution:
+For each demonstration $d$, we maintain a mutation distribution:
 
-\[
+$$
 p(\phi \mid d; \eta_d)
-\]
+$$
 
 parameterized as a diagonal Gaussian (or mixture).
 
 ### Iterative Update
 
-1. Sample mutations \( \phi_i \sim p(\phi \mid d) \)  
-2. Generate trajectories \( \tau_{d,\phi_i} \)  
-3. Compute acquisition scores \( s_i = s(d, \phi_i) \)  
+1. Sample mutations $\phi_i \sim p(\phi \mid d)$  
+2. Generate trajectories $\tau_{d,\phi_i}$  
+3. Compute acquisition scores $s_i = s(d, \phi_i)$  
 4. Select elite mutations  
 5. Update distribution parameters toward elites using CEM-style smoothing  
 μ_d ← (1 - α) μ_d + α μ_elite
@@ -243,13 +243,13 @@ At each active learning iteration, we select which demonstration to expand.
 
 Define a demo score:
 
-\[
+$$
 S(d) = \text{mean elite acquisition score}
-\]
+$$
 
 We sample demonstrations according to:
 
-\[
+$$
 P(d)
 =
 (1 - \varepsilon)
@@ -257,12 +257,12 @@ P(d)
 {\sum_{d'} S(d')^\beta}
 +
 \frac{\varepsilon}{|D|}
-\]
+$$
 
 Where:
 
-- \( \beta \) controls exploitation sharpness  
-- \( \varepsilon \) ensures exploration  
+- $\beta$ controls exploitation sharpness  
+- $\varepsilon$ ensures exploration  
 
 ---
 
