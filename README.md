@@ -250,13 +250,7 @@ $$
 We sample demonstrations according to:
 
 $$
-P(d)
-=
-(1 - \varepsilon)
-\frac{S(d)^\beta}
-{\sum_{d'} S(d')^\beta}
-+
-\frac{\varepsilon}{|D|}
+P(d)=(1 - \varepsilon)\frac{S(d)^\beta}{\sum_{d'} S(d')^\beta}+\frac{\varepsilon}{|D|}
 $$
 
 Where:
