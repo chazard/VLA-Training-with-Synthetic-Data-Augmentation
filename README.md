@@ -287,12 +287,9 @@ This creates an implicit curriculum:
 
 ## Results
 
-Below is an example small set of MimicGen-generated trajectories in our dataset.
+Below is an example small set of MimicGen-generated trajectories in our dataset (click to open full video):
 
-> Note: GitHub does not render inline `<video>` tags from repository files.  
-> Use the link below to open or download the video.
-
-[▶ Generated dataset sample (MP4)](source/docs/generated_dataset_small_obs.mp4)
+[![Generated dataset sample](source/docs/generated_dataset_small_obs.gif)](source/docs/generated_dataset_small_obs.mp4)
 
 ## Evaluation Summary
 
