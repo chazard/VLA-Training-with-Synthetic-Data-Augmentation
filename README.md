@@ -299,9 +299,9 @@ Below is an example small set of MimicGen-generated trajectories in our dataset:
 
 Evaluations are done on the custom cube stacking environment where we can vary environment setup variables like cube positioning, lighting, camera extrinsics jitter, etc.
 
-| Experiment name | Model name | Environment                                   | Varied parameters        | Training demonstrations | MimicGen success rate | Eval success rate | Additional notes               |
-|-----------------|-----------|-----------------------------------------------|--------------------------|-------------------------|-----------------------|-------------------|--------------------------------|
-| Baseline        | GR00T     | Isaac-Stack-Cube-Franka-IK-Rel-Visuomotor-Mimic-v0 | cube positions, lighting | 1000                    | 33.6%                 | 53%               | No adversarial augmentation    |
+| Experiment name | Varied parameters        | Training demonstrations | MimicGen success rate | Eval success rate | Additional notes            |
+|-----------------|--------------------------|-------------------------|-----------------------|-------------------|-----------------------------|
+| Baseline        | cube positions, lighting | 1000                    | 33.6%                 | 53%               | No adversarial augmentation |
 
 ----------------------------------------------------------------------
 ## Dataset Generation Commands
