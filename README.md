@@ -1,4 +1,4 @@
-# Active Learning for Robust Visuomotor Policies with MimicGen + GR00T (WIP)
+# Active Learning for Robust Visuomotor Policies (WIP)
 
 ## Overview
 
@@ -8,6 +8,8 @@ This project tests whether we can systematically improve robustness of a visuomo
 - **GR00T** fine-tuning on the resulting dataset
 - **Failure-region search** in a continuous perturbation space using Cross-Entropy Method (CEM)
 - An **active learning loop** (in progress) that targets synthetic data generation toward discovered failure pockets
+
+We define a set of mutations that we can apply to a target environment for the task we are attempting to learn: we can selectively vary parameters such as object placement, camera extrinsics jitter, lighting and color conditions, etc. to try and fool our baseline policy into degrading its performance. By identifying these regions where the policy underperforms and then generating new trajectories (via MimicGen) in these domains to supplement our existing dataset, we aim to improve the overall robustness of our trained visuomotor policy.
 
 This project is currently a work in progress ...
 
@@ -285,7 +287,7 @@ This creates an implicit curriculum:
 
 ----------------------------------------------------------------------
 
-## Results
+## Results (In Progress)
 
 Below is an example small set of MimicGen-generated trajectories in our dataset (click to open full video):
 
