@@ -13,6 +13,7 @@ dependencies = [
     "prettytable",
     "toml",
     "scikit-learn",
+    "pyzmq",  # Required for GR00T policy server client communication
 ]
 
 [project.optional-dependencies]

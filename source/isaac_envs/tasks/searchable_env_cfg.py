@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from typing import Any
 
 # Type for settable range parameters: event term -> list of (key_sequence, range_tuple).
@@ -13,14 +12,15 @@ from typing import Any
 SettableParamsT = dict[str, list[tuple[list[str], tuple[float, float]]]]
 
 
-class SearchableEnvironmentCfg(ABC):
+class SearchableEnvironmentCfg:
     """
     Abstract base for env configs that support domain search: settable distribution
     parameters, active event terms, feasibility checks, and introspection of
     settable parameters (e.g. for CEM or other search over domain randomization).
+
+    Note: using the actual abstract decorators causes problems with pickling, so we omit those
     """
 
-    @abstractmethod
     def set_distribution_parameters(self, params: SettableParamsT) -> None:
         """Set parameter ranges from the same structure as get_settable_parameters_for_active_events.
 
@@ -30,7 +30,6 @@ class SearchableEnvironmentCfg(ABC):
         """
         ...
 
-    @abstractmethod
     def set_active_event_terms(self, term_names: list[str]) -> None:
         """Change which event terms are active and rebuild the events object.
 
@@ -39,19 +38,16 @@ class SearchableEnvironmentCfg(ABC):
         """
         ...
 
-    @abstractmethod
     def get_default_event_ranges(self) -> dict[str, Any]:
         """Return a copy of the default event parameter ranges for this env.
         Used by domain samplers so they can apply to any env that exposes this interface."""
         ...
 
-    @abstractmethod
     def get_default_active_event_terms(self) -> list[str]:
         """Return the default list of active event term names for this env.
         Used by domain samplers so they can apply to any env that exposes this interface."""
         ...
 
-    @abstractmethod
     def check_feasibility(
         self,
         distribution_parameters: SettableParamsT,
@@ -67,7 +63,6 @@ class SearchableEnvironmentCfg(ABC):
         """
         ...
 
-    @abstractmethod
     def get_settable_parameters_for_active_events(self) -> SettableParamsT:
         """Return current range parameters for each active event term in a stable order.
 

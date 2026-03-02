@@ -104,6 +104,9 @@ class GrootFrankaAgent(Agent):
         """Build policy observation dict with B=num_envs and T from modality config.
         T is the observation history length (e.g. T=1 in franka_stack_groot_config: current frame only).
         We replicate the current frame when T>1 if no history buffer is available."""
+        # Extract policy observations if nested under "policy" key
+        policy_obs = obs.get("policy", obs)
+        
         cfg = self._get_modality_config()
         B = self.num_envs
 
@@ -112,16 +115,25 @@ class GrootFrankaAgent(Agent):
         T_video = len(video_cfg.delta_indices) if video_cfg else 1
         video = {}
         for env_key, policy_key in self.video_map.items():
-            if env_key not in obs:
+            if env_key not in policy_obs:
                 continue
-            x = obs[env_key]
+            x = policy_obs[env_key]
             if isinstance(x, torch.Tensor):
                 x = x.cpu().numpy()
             x = np.asarray(x, dtype=np.uint8)
-            if x.ndim == 3:
-                x = x[:, None, ...]  # (B,H,W,3) -> (B,1,H,W,3)
-            elif x.ndim == 4 and x.shape[1] != T_video:
-                x = np.repeat(x[:, :1], T_video, axis=1)  # repeat first frame to fill T
+            
+            # Convert from (B, H, W, 3) to (B, T, H, W, 3) by adding temporal dimension
+            if x.ndim != 4 or x.shape[-1] != 3:
+                raise ValueError(
+                    f"Video key '{env_key}' must be shape (B, H, W, 3), got {x.shape}"
+                )
+            if x.shape[0] != B:
+                raise ValueError(
+                    f"Video batch size mismatch: got {x.shape[0]}, expected {B} for key '{env_key}'"
+                )
+            # Add temporal dimension: (B, H, W, 3) -> (B, T, H, W, 3)
+            x = x[:, None, ...]
+            
             video[policy_key] = x
         out = {"video": video}
 
@@ -129,10 +141,12 @@ class GrootFrankaAgent(Agent):
         state_cfg = cfg.get("state")
         T_state = len(state_cfg.delta_indices) if state_cfg else 1
         state_blocks = []
+        missing_keys = []
         for k in self.state_keys:
-            if k not in obs:
+            if k not in policy_obs:
+                missing_keys.append(k)
                 continue
-            x = obs[k]
+            x = policy_obs[k]
             if isinstance(x, torch.Tensor):
                 x = x.cpu().numpy()
             x = np.asarray(x, dtype=np.float32)
@@ -143,14 +157,30 @@ class GrootFrankaAgent(Agent):
             if x.shape[1] != T_state:
                 x = np.repeat(x[:, :1], T_state, axis=1)
             state_blocks.append(x)
-        if state_blocks:
+        
+        if not state_blocks:
+            raise RuntimeError(
+                f"No state keys found in observation. Expected keys: {self.state_keys}. "
+                f"Missing keys: {missing_keys}. Available keys in obs['policy']: {list(policy_obs.keys())}"
+            )
+        
+        state_keys_cfg = state_cfg.modality_keys if state_cfg else ["state"]
+        if len(state_keys_cfg) == 1:
+            # Single state key: concatenate all state blocks
             state_concat = np.concatenate(state_blocks, axis=-1)  # (B, T, D)
-            state_keys_cfg = state_cfg.modality_keys if state_cfg else ["state"]
-            out["state"] = {state_keys_cfg[0]: state_concat} if len(state_keys_cfg) == 1 else {k: state_blocks[i] for i, k in enumerate(state_keys_cfg)}
+            out["state"] = {state_keys_cfg[0]: state_concat}
+        else:
+            # Multiple state keys: map each block to its corresponding key
+            if len(state_blocks) != len(state_keys_cfg):
+                raise RuntimeError(
+                    f"State blocks count ({len(state_blocks)}) != modality keys count ({len(state_keys_cfg)}). "
+                    f"Expected keys: {state_keys_cfg}, found blocks for: {self.state_keys}"
+                )
+            out["state"] = {k: state_blocks[i] for i, k in enumerate(state_keys_cfg)}
 
         # Language: (B, 1) list of lists
         lang_cfg = cfg.get("language")
-        task_str = obs.get(self.language_key, self.task_str)
+        task_str = policy_obs.get(self.language_key, obs.get(self.language_key, self.task_str))
         if isinstance(task_str, (list, tuple)):
             tasks = list(task_str)[:B]
         else:
@@ -160,26 +190,47 @@ class GrootFrankaAgent(Agent):
         return out
 
     def _policy_action_to_env_action(self, action_dict: dict[str, Any]) -> torch.Tensor:
-        """Take first action step and convert to (num_envs, action_dim) on env device."""
+        """Take first action step and convert to (num_envs, action_dim) on env device.
+        
+        Concatenates all action keys (e.g., eef_delta + gripper) in the order specified
+        by the modality config to match the environment's action space.
+        """
         cfg = self._get_modality_config()
         action_cfg = cfg.get("action")
         keys = action_cfg.modality_keys if action_cfg else list(action_dict.keys())
         if not keys:
             raise RuntimeError("Policy returned no action keys")
-        # Single action stream: (B, horizon, D)
-        first_key = keys[0]
-        arr = action_dict[first_key]
-        if isinstance(arr, np.ndarray):
-            arr = torch.from_numpy(arr).to(device=self.device, dtype=torch.get_default_dtype())
-        else:
-            arr = arr.to(self.device)
-        step0 = arr[:, 0, :]  # (B, action_dim)
-        if step0.shape[-1] != self.action_dim:
+        
+        # Extract first timestep from each action key and concatenate
+        action_blocks = []
+        for key in keys:
+            if key not in action_dict:
+                raise KeyError(
+                    f"Action key '{key}' from modality config not found in policy output. "
+                    f"Available keys: {list(action_dict.keys())}"
+                )
+            arr = action_dict[key]
+            if isinstance(arr, np.ndarray):
+                arr = torch.from_numpy(arr).to(device=self.device, dtype=torch.get_default_dtype())
+            else:
+                arr = arr.to(self.device)
+            
+            # Extract first timestep: (B, horizon, D) -> (B, D)
+            step0 = arr[:, 0, :]
+            action_blocks.append(step0)
+        
+        # Concatenate all action components: (B, D1), (B, D2), ... -> (B, D1+D2+...)
+        combined_action = torch.cat(action_blocks, dim=-1)  # (B, total_action_dim)
+        
+        if combined_action.shape[-1] != self.action_dim:
+            dims_per_key = [block.shape[-1] for block in action_blocks]
             raise ValueError(
-                f"Policy action dim {step0.shape[-1]} != env action_dim {self.action_dim}. "
+                f"Policy action dim {combined_action.shape[-1]} (from keys {keys} with dims {dims_per_key}) "
+                f"!= env action_dim {self.action_dim}. "
                 "Check embodiment/modality config matches env."
             )
-        return step0
+        
+        return combined_action
 
     def __call__(self, obs: dict[str, Any]) -> dict[str, Any]:
         policy_obs = self._obs_to_policy_obs(obs)

@@ -284,6 +284,26 @@ This creates an implicit curriculum:
 -   MimicGen becomes adaptively guided rather than uniformly random.
 
 ----------------------------------------------------------------------
+
+## Results
+
+Below is an example small set of MimicGen-generated trajectories in our dataset:
+
+<video controls width="640">
+  <source src="source/docs/generated_dataset_small_obs.mp4" type="video/mp4">
+  Your browser does not support the video tag. Download the video
+  <a href="source/docs/generated_dataset_small_obs.mp4">here</a>.
+</video>
+
+## Evaluation Summary
+
+Evaluations are done on the custom cube stacking environment where we can vary environment setup variables like cube positioning, lighting, camera extrinsics jitter, etc.
+
+| Experiment name | Model name | Environment                                   | Varied parameters        | Training demonstrations | MimicGen success rate | Eval success rate | Additional notes               |
+|-----------------|-----------|-----------------------------------------------|--------------------------|-------------------------|-----------------------|-------------------|--------------------------------|
+| Baseline        | GR00T     | Isaac-Stack-Cube-Franka-IK-Rel-Visuomotor-Mimic-v0 | cube positions, lighting | 1000                    | 33.6%                 | 53%               | No adversarial augmentation    |
+
+----------------------------------------------------------------------
 ## Dataset Generation Commands
 
 ### Annotate demos (for MimicGen)
@@ -310,6 +330,17 @@ This creates an implicit curriculum:
   --input_file /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/source/data/annotated_franka_stack_dataset.hdf5 \
   --output_file /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/source/data/generated_dataset_small.hdf5
 ```
+
+### Play back demonstration
+```bash
+python -m robomimic.scripts.playback_dataset \
+    --dataset /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/source/data/generated_dataset_small.hdf5 \
+    --use-obs \
+    --render_image_names table_cam wrist_cam \
+    --video_path PATH_TO_SAVE_VIDEO \
+    --n 5
+```
+
 
 ### Generate a larger dataset (headless)
 
@@ -429,6 +460,40 @@ CUDA_VISIBLE_DEVICES=0 python \
   --dataloader-num-workers 4 \
   --num-shards-per-epoch 10000
 ```
+
+### Run GR00T Policy Server
+
+Start the GR00T inference server with your trained model:
+
+```bash
+cd /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/third_party/groot
+conda activate groot
+
+python gr00t/eval/run_gr00t_server.py \
+    --model-path /home/chris/groot_training_results/checkpoint-2000 \
+    --embodiment-tag NEW_EMBODIMENT \
+    --modality-config-path /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/source/scripts/franka_stack_groot_config.py \
+    --device cuda:0 \
+    --host 0.0.0.0 \
+    --port 5555
+```
+
+**Note:** Replace `checkpoint-2000` with the desired checkpoint (e.g., `checkpoint-4000`, `checkpoint-6000`, `checkpoint-8000`, `checkpoint-10000`) based on your training progress.
+
+### Run GR00T Agent in Isaac Lab
+
+In a separate terminal, run the Isaac Lab environment with the GR00T agent:
+
+```bash
+cd /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/source
+python scripts/run_agent_rollout.py \
+    --task Isaac-Stack-Cube-Franka-Visuomotor-Custom-v0 \
+    --num_envs 4 \
+    --agent groot \
+    --enable_cameras
+```
+
+The agent will connect to the GR00T server at `localhost:5555` (default port).
 
 Note that the above training command is suitable for training with a single 24 GB gpu (eg an RTX 4090) since we do training with Adam in 8 bits. For more information, see [README_GR00T_TRAINING.md](README_GR00T_TRAINING.md).
 
