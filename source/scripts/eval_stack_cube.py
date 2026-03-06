@@ -33,14 +33,22 @@ from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description="Evaluate stack cube env. Use --headless for no GUI.")
 parser.add_argument("--disable_fabric", action="store_true", default=False)
-parser.add_argument("--num_envs", type=int, default=4)
+parser.add_argument("--num_envs", type=int, default=8)
 parser.add_argument("--num_rounds", type=int, default=50, help="Number of evaluation rounds (each round runs num_envs episodes in parallel).")
 parser.add_argument("--task", type=str, default="Isaac-Stack-Cube-Franka-Visuomotor-Custom-v0")
 parser.add_argument("--agent", type=str, choices=["zero", "random", "groot"], default="zero")
+
 #Use --run_adversarial_domain_rand_search to use DomainSampler to search for domains with lower success
 parser.add_argument("--run_adversarial_domain_rand_search", action="store_true", help="Use DomainSampler to adapt domain params each round to lower success/reward.")
-parser.add_argument("--num_cem_clusters", type=int, default=1, help="Number of GMM components in CEM when using adversarial domain search (default: 2).")
-#Use --headless for no GUI.
+parser.add_argument("--num_cem_clusters", type=int, default=1, help="Number of GMM components in CEM when using adversarial domain search.")
+parser.add_argument("--cem_batch_size", type=int, default=20, help="Samples (rounds) per CEM update when using adversarial domain search; GMM is updated every this many rounds.")
+parser.add_argument("--elite_frac", type=float, default=0.4, help="Fraction of CEM batch used as elite (lowest success rate) when using adversarial domain search.")
+# Note: if running the adversarial CEM search, the number of updates to the distributions will be
+# num_rounds / cem_batch_size (based on average success rate on num_envs rollouts),
+# so set the number of rounds accordingly.
+# recommended to do at least 20 rounds of CEM updates (or more for more clusters)
+
+# Use --headless for no GUI.
 AppLauncher.add_app_launcher_args(parser)
 args = parser.parse_args()
 
@@ -73,7 +81,12 @@ def main():
     max_steps = getattr(env.unwrapped, "max_episode_length", 1000)
 
     domain_sampler = (
-        DomainSampler(env, n_cem_clusters=args.num_cem_clusters)
+        DomainSampler(
+            env,
+            n_cem_clusters=args.num_cem_clusters,
+            cem_batch_size=args.cem_batch_size,
+            elite_frac=args.elite_frac,
+        )
         if args.run_adversarial_domain_rand_search
         else None
     )
@@ -125,14 +138,21 @@ def main():
                 f"mean reward: {last_batch_results['mean_reward']:.4f}"
             )
 
-    env.close()
-
     mean_reward = np.mean(all_rewards)
     success_rate = np.mean(all_success)
     print(f"Rounds: {args.num_rounds}")
     print(f"Num envs: {num_envs}")
     print(f"Success rate: {success_rate:.2%}")
     print(f"Mean reward: {mean_reward:.4f}")
+
+    if domain_sampler is not None:
+        weights, means_real, covs_real = domain_sampler.get_cem_means_and_covariances()
+        print("\n--- CEM GMM clusters (after evaluation) ---")
+        print("Weights:", weights)
+        print("Means (real space):\n", means_real)
+        print("Diagonal covariances (real space):\n", covs_real)
+
+    env.close()
 
 
 if __name__ == "__main__":

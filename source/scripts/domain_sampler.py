@@ -57,9 +57,9 @@ class CEMSearch:
     def __init__(
         self,
         ranges: np.ndarray,
-        n_clusters: int = 2,
-        cov_reg: float = 1e-4,
-        cov_init_scale: float = 0.1,
+        n_clusters: int,
+        cov_reg: float,
+        cov_init_scale: float,
         smoothing_alpha: float = 0.3,
     ) -> None:
         """Initialize search with random means in normalized [0,1]^D.
@@ -124,7 +124,7 @@ class CEMSearch:
             means_init=self._gmm_means,
             weights_init=self._gmm_weights,
             precisions_init=precisions_init,
-            max_iter=100,
+            max_iter=20,
         )
         gmm.fit(elite_norm)
 
@@ -134,8 +134,15 @@ class CEMSearch:
         
         alpha = self._smoothing_alpha
         self._gmm_weights = (1 - alpha) * self._gmm_weights + alpha * pi_new
+        self._gmm_weights = self._gmm_weights / self._gmm_weights.sum()
+
         self._gmm_means = (1 - alpha) * self._gmm_means + alpha * means_new
+        #make sure gmm means stay in bounds
+        self._gmm_means = np.clip(self._gmm_means, 0.0, 1.0)
+        
         self._gmm_covs = (1 - alpha) * self._gmm_covs + alpha * covs_new
+        #apply a variance floor to prevent premature collapse
+        self._gmm_covs = np.maximum(self._gmm_covs, self._cov_reg)
 
 
 class DomainSampler:
@@ -150,10 +157,10 @@ class DomainSampler:
         self,
         env: Any,
         n_cem_clusters: int = 1,
-        cem_batch_size: int = 16,
-        elite_frac: float = 0.25,
-        cov_reg: float = 1e-4,
-        cov_init_scale: float = 0.1,
+        cem_batch_size: int = 20,
+        elite_frac: float = 0.4,
+        cov_reg: float = 0.005,
+        cov_init_scale: float = 0.2,
         max_feasibility_samples: int = 100,
     ) -> None:
         """Build spec and ranges from config; create CEMSearch at center of ranges.
@@ -226,16 +233,18 @@ class DomainSampler:
         self._last_suggested_vec = next_vec
         self._cfg.set_distribution_parameters(distribution_parameters)
 
-    def get_cem_means_and_covariances(self) -> tuple[np.ndarray, np.ndarray]:
-        """Return current CEM GMM means and diagonal covariances in real (denormalized) space.
+    def get_cem_means_and_covariances(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Return current CEM GMM weights, means, and diagonal covariances in real (denormalized) space.
 
         Returns:
+            weights: Shape (n_clusters,), mixture weights.
             means: Shape (n_clusters, D), cluster centers in the same space as the search ranges.
             covariances: Shape (n_clusters, D), diagonal variance per dimension (real space).
         """
+        weights = self._cem_search._gmm_weights.copy()
         means_norm = self._cem_search._gmm_means
         covs_norm = self._cem_search._gmm_covs
         means_real = self._cem_search._denormalize(means_norm)
         scale = self._cem_search.ranges[:, 1] - self._cem_search.ranges[:, 0]
         covs_real = (scale ** 2) * covs_norm
-        return means_real, covs_real
+        return weights, means_real, covs_real

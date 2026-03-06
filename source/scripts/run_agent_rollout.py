@@ -59,6 +59,7 @@ import torch
 import gymnasium as gym
 import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils import parse_env_cfg
+import isaaclab_mimic.envs  # noqa: F401 - Register MimicGen environments
 import isaac_envs.tasks  # noqa: F401
 
 from agent import make_agent, make_groot_comparison_agents

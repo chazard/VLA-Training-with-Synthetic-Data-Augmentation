@@ -1,5 +1,7 @@
 # Active Learning for Robust Visuomotor Policies (WIP)
 
+![Active Learning Pipeline](source/docs/active learning pipeline.jpg)
+
 ## Overview
 
 This project tests whether we can systematically improve robustness of a visuomotor stacking policy by combining:
@@ -11,9 +13,7 @@ This project tests whether we can systematically improve robustness of a visuomo
 
 We define a set of mutations that we can apply to a target environment for the task we are attempting to learn: we can selectively vary parameters such as object placement, camera extrinsics jitter, lighting and color conditions, etc. to try and fool our baseline policy into degrading its performance. By identifying these regions where the policy underperforms and then generating new trajectories (via MimicGen) in these domains to supplement our existing dataset, we aim to improve the overall robustness of our trained visuomotor policy.
 
-This project is currently a work in progress ...
-
-**Primary task:** `Isaac-Stack-Cube-Franka-IK-Rel-Blueprint-v0` — Stack three cubes (bottom to top: blue, red, green) with Franka (IK-relative control). The blueprint environment aligns with the NVIDIA GR00T synthetic manipulation workflow.
+This project is currently a work in progress and will be periodically updated.
 
 ## Problem Statement
 
@@ -29,10 +29,23 @@ While uniform sampling provides coverage, it suffers from:
 
 If performance degrades in localized regions of perturbation space, uniform augmentation is inefficient. Instead, we aim to identify difficult regions in perturbation space and generate targeted synthetic data to improve robustness.
 
+## Demonstration and Rollout Examples
+Below is an example small set of MimicGen-generated trajectories in our dataset (click to open full video):
+
+[![Generated dataset sample](source/docs/generated_dataset_small_obs.gif)](source/docs/generated_dataset_small_obs.mp4)
+
+Below are some policy rollouts of the baseline groot model (trained on a uniformly generated mimicgen synthetic dataset):
+[![Normal Rollout](source/docs/normal_rollout_x4.gif)](source/docs/normal_rollout_x4.mp4)
+
+Policy rollouts from the same model on environment configurations found by the adversarial CEM search (see methodology section):
+[![Failure Rollout](source/docs/failure_rollout_x4.gif)](source/docs/failure_rollout_x4.mp4)
+
+Note that the first set of "normal" environments that the model is rolled out on generally lead to the task being completed, whereas the adversarially sampled environments lead to the policy idling around or otherwise acting sub-optimally.
+----
 
 ## Milestones
 
-### Milestone 1 — Baseline MimicGen → GR00T
+### Milestone 1 — Baseline MimicGen → GR00T (Done)
 
 - Collect/obtain demonstration HDF5 for cube stacking
 - Annotate demos for Mimic
@@ -41,28 +54,28 @@ If performance degrades in localized regions of perturbation space, uniform augm
 - Fine-tune GR00T baseline
 - Evaluate baseline on nominal conditions + held-out randomized eval
 
-### Milestone 2 — Search for failure pockets in our domain setup
+### Milestone 2 — Search for failure pockets in our domain setup (Done)
 
-- Define continuous perturbation space θ (geometry + camera + lighting)
+- Define continuous configuration/perterbation space θ (geometry + camera + lighting)
 - Run failure search (CEM) over θ on the baseline policy
 - Build a reproducible "failure suite" of θ values and seeds
 
-### Milestone 3 — Gradient-Guided Active Learning
+### Milestone 3 — Gradient-Guided Active Learning (Currently in Progress)
 
-- Condition MimicGen randomization on elite θ regions found by CEM (cross entropy method)
-- Regenerate targeted synthetic data
-- Fine-tune GR00T on expanded dataset
-- Re-evaluate on the frozen failure suite and report improvement
+- Create an orchestrator that switches off between model training and domain failure search + targeted synthetic data generation
+- Use two tiered sampling to sample high leverage demonstrations and on elite θ regions found by CEM (cross entropy method) to feed to MimicGen data generation
+- Re-evaluate on a frozen failure suite and report improvement
 
 ### Milestone 4 — Extensions
 
 - Extend domain perturbations (camera intrinsics, cube scale, etc.)
 - Extend to additional tasks/scenes (multi-task training) to prove scalability of active learning methodology
-- Extend to other VLA models like pi-0
+- Possibly extend to other VLA models like pi-0
 
-## Isaac Lab Mimic (MimicGen) Baseline
+----
+# Methodology
 
-### MimicGen Data Pipeline
+## MimicGen Data Pipeline
 
 We treat Isaac Lab Mimic as a baseline data multiplier:
 
@@ -72,11 +85,11 @@ We treat Isaac Lab Mimic as a baseline data multiplier:
 
 This produces an HDF5 dataset containing actions, states, and camera observations. After dataset generation, we finetine the Groot model on a NEW_EMBODIMENT head to get an initial baseline policy trained on the real + synthetic data combination.
 
-## Intermediate Step: CEM Failure-Pocket Search (Pre–Active Learning)
+The primary task we will iterate on is `Isaac-Stack-Cube-Franka-IK-Rel-Blueprint-v0` — Stack three cubes (bottom to top: blue, red, green) with Franka (IK-relative control). The blueprint environment aligns with the NVIDIA GR00T synthetic manipulation workflow. As the project progresses we can easily extend to other simulated domains as we refine the approach for identifying problematic configurations and learning to fix them.
+
+## CEM Failure-Pocket Search (Pre–Active Learning)
 
 Before introducing gradient-guided data selection, we first verify that meaningful robustness gaps exist in the continuous perturbation space with respect to the baseline policy trained on uniformly sampled MimicGen data.
-
----
 
 ### Perturbation Space
 
@@ -93,8 +106,6 @@ Encoding reset-time environment parameters such as:
 - Lighting variation
 - (Optionally) Camera extrinsics jitter
 
----
-
 ### Optimization Objective
 
 For a given perturbation $\theta$, we estimate:
@@ -110,8 +121,6 @@ Where:
 - Expectation is approximated with multiple rollouts per $\theta$
 
 The goal is to maximize failure probability.
-
----
 
 ### CEM Search Procedure
 
@@ -132,8 +141,6 @@ At each iteration:
 7. Repeat
 
 We use diagonal covariance and variance floors to prevent premature collapse.
-
----
 
 ### Output: Failure Suite
 
@@ -158,7 +165,7 @@ We instead aim to generate synthetic data that maximizes expected training signa
 
 This reframes active learning as a **training-signal maximization problem**, rather than a pure failure-rate maximization problem.
 
----
+For the active learning loop, we do a two-tiered sampling approach to select high leverage demonstrations and problematic perturbation configurations. MimicGen relies on existing demonstrations to generate synthetic data and we can therefore expect some demonstrations to be more informative that others based on demonstration quality. Therefore we want to sample demonstrations we can learn the most from in the environment configurations we can learn the most from.
 
 ## Core Idea
 
@@ -190,8 +197,6 @@ Where:
 - Large gradient norm ⇒ trajectory would significantly update the model  
 - Small gradient norm ⇒ trajectory is redundant or already well learned  
 
----
-
 ## Efficient Gradient Approximation
 
 To reduce computational cost:
@@ -212,8 +217,6 @@ $$
 5. Compute squared L2 norm over action-head gradients  
 
 This provides a low-cost proxy for expected parameter update magnitude.
-
----
 
 ## Per-Demonstration Mutation Search
 
@@ -237,8 +240,6 @@ parameterized as a diagonal Gaussian (or mixture).
 
 This allows each demonstration to specialize toward high-impact regions.
 
----
-
 ## Demonstration Selection (Explore–Exploit)
 
 At each active learning iteration, we select which demonstration to expand.
@@ -260,8 +261,6 @@ Where:
 - $\beta$ controls exploitation sharpness  
 - $\varepsilon$ ensures exploration  
 
----
-
 ## Data Aggregation Step
 
 For selected demo d:
@@ -275,8 +274,6 @@ For selected demo d:
 5.  Smooth demo score:
     S(d) ← ρ S(d) + (1 - ρ) mean_elite(s_i)
 
----
-
 ## Expected Outcome
 
 This creates an implicit curriculum:
@@ -287,13 +284,7 @@ This creates an implicit curriculum:
 
 ----------------------------------------------------------------------
 
-## Results (In Progress)
-
-Below is an example small set of MimicGen-generated trajectories in our dataset (click to open full video):
-
-[![Generated dataset sample](source/docs/generated_dataset_small_obs.gif)](source/docs/generated_dataset_small_obs.mp4)
-
-## Evaluation Summary
+## Evaluation Summary (In Progress)
 
 Evaluations are done on the custom cube stacking environment where we can vary environment setup variables like cube positioning, lighting, camera extrinsics jitter, etc.
 
@@ -468,7 +459,7 @@ cd /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/third_party/groot
 conda activate groot
 
 python gr00t/eval/run_gr00t_server.py \
-    --model-path /home/chris/groot_training_results/checkpoint-2000 \
+    --model-path /home/chris/groot_training_results/checkpoint-10000 \
     --embodiment-tag NEW_EMBODIMENT \
     --modality-config-path /home/chris/VLA-Training-with-Synthetic-Data-Augmentation/source/scripts/franka_stack_groot_config.py \
     --device cuda:0 \
@@ -476,7 +467,7 @@ python gr00t/eval/run_gr00t_server.py \
     --port 5555
 ```
 
-**Note:** Replace `checkpoint-2000` with the desired checkpoint (e.g., `checkpoint-4000`, `checkpoint-6000`, `checkpoint-8000`, `checkpoint-10000`) based on your training progress.
+**Note:** Replace `checkpoint-10000` with the desired checkpoint based on your training progress.
 
 ### Run GR00T Agent in Isaac Lab
 
@@ -502,7 +493,8 @@ Note that the above training command is suitable for training with a single 24 G
 - **HDF5 → LeRobot conversion:** complete
 - **Baseline policy training:** complete 
 - **CEM search infrastructure:** complete  
-- **CEM Failure suite generation:** in progress  
+- **CEM Failure suite generation:** complete  
 - **Active learning orchestrator:** in progress
-- **Empirical validation vs uniform baseline:** pending
+- **Tuning active learning pipeline:** pending
+- **Empirical validation of active learning vs uniform baseline:** pending
 
