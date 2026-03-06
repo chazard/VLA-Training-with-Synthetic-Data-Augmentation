@@ -30,11 +30,11 @@ While uniform sampling provides coverage, it suffers from:
 If performance degrades in localized regions of perturbation space, uniform augmentation is inefficient. Instead, we aim to identify difficult regions in perturbation space and generate targeted synthetic data to improve robustness.
 
 ## Demonstration and Rollout Examples
-Below is an example small set of MimicGen-generated trajectories in our dataset (click to open full video):
+Below is an example small set of human generated trajectories given to MimicGen:
 
 [![Generated dataset sample](source/docs/generated_dataset_small_obs.gif)](source/docs/generated_dataset_small_obs.mp4)
 
-Below are some policy rollouts of the baseline groot model (trained on a uniformly generated mimicgen synthetic dataset):
+Policy rollouts of the baseline groot model (trained on a uniformly generated mimicgen synthetic dataset):
 
 [![Normal Rollout](source/docs/normal_rollout_x4.gif)](source/docs/normal_rollout_x4.mp4)
 
@@ -43,6 +43,7 @@ Policy rollouts from the same model on environment configurations found by the a
 [![Failure Rollout](source/docs/failure_rollout_x4.gif)](source/docs/failure_rollout_x4.mp4)
 
 Note that the first set of "normal" environments that the model is rolled out on generally lead to the task being completed, whereas the adversarially sampled environments lead to the policy idling around or otherwise acting sub-optimally.
+
 ----
 
 ## Milestones
