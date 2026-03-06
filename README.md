@@ -1,6 +1,6 @@
 # Active Learning for Robust Visuomotor Policies (WIP)
 
-![Active Learning Pipeline](source/docs/active learning pipeline.jpg)
+![Active Learning Pipeline](source/docs/active%20learning%20pipeline.jpg)
 
 ## Overview
 
@@ -35,9 +35,11 @@ Below is an example small set of MimicGen-generated trajectories in our dataset 
 [![Generated dataset sample](source/docs/generated_dataset_small_obs.gif)](source/docs/generated_dataset_small_obs.mp4)
 
 Below are some policy rollouts of the baseline groot model (trained on a uniformly generated mimicgen synthetic dataset):
+
 [![Normal Rollout](source/docs/normal_rollout_x4.gif)](source/docs/normal_rollout_x4.mp4)
 
 Policy rollouts from the same model on environment configurations found by the adversarial CEM search (see methodology section):
+
 [![Failure Rollout](source/docs/failure_rollout_x4.gif)](source/docs/failure_rollout_x4.mp4)
 
 Note that the first set of "normal" environments that the model is rolled out on generally lead to the task being completed, whereas the adversarially sampled environments lead to the policy idling around or otherwise acting sub-optimally.
